@@ -4,8 +4,6 @@ const fs    = require('fs');
 const { port: PORT, httpsPort, envName } = require('./config.js');
 const { createFile, readFile, updateFile, deleteFile } = require('./lib/crud.js');
 
-deleteFile('test', 'newFile.json');
-
 const receiveArgs = async (req) => {
   const chunks = [];
   for await (const chunk of req) chunks.push(chunk);
