@@ -1,15 +1,28 @@
-const http   = require('http');
-const https  = require('https');
-const fs     = require('fs');
-const crypto = require('crypto');
-const { port: PORT, httpsPort, envName, secret } = require('./config.js');
-const { createFile, readFile, updateFile, deleteFile } = require('./lib/crud.js');
+const http  = require('http');
+const https = require('https');
+const fs    = require('fs');
+const { port: PORT, httpsPort, envName } = require('./config.js');
+const userHandlers = require('./lib/userHandlers.js');
 
 const receiveArgs = async (req) => {
   const chunks = [];
   for await (const chunk of req) chunks.push(chunk);
   const data = Buffer.concat(chunks).toString();
   return JSON.parse(data);
+};
+
+const parseQueryParams = (req) => {
+  const { url, headers } = req;
+  const host = headers.host;
+  const port = host.split(':')[1];
+  const protocol = port.includes('1') ? 'https' : 'http';
+  const urlObj = new URL(`${protocol}://${host}${url}`);
+  const queryParams = {};
+  if (urlObj.search === '') return queryParams;
+  for (const [key, value] of urlObj.searchParams.entries()) {
+    queryParams[key] = value;
+  }
+  return { queryParams, endpoint: urlObj.pathname };
 };
 
 const routing = {
@@ -23,28 +36,10 @@ const routing = {
     get: async () => 'Hello there! Nice to meet you!',
   },
   '/users': {
-    get: async () => {},
-    post: async (payload, statusCode) => {
-      const required = ['firstName', 'lastName', 'phone', 'password', 'tosAgreement'];
-      for (const prop of required) {
-        if (!payload[prop]) return {result: 'Missing required fields!', statusCode: 400};
-      }
-      const { phone, password } = payload;
-      // f. ex. 7, could be any other value
-      if (phone.length < 7) return {result: 'Phone number too short!', statusCode: 400};
-      const data = {...payload};
-      const hashedPassword = crypto.createHmac('sha256', secret).update(password).digest('hex');
-      data.password = hashedPassword;
-      try {
-        const result = await createFile('users', `${phone}.json`, data);
-        return {result, statusCode};
-      } catch (err) {
-        console.log(err);
-        return {result: 'User already exists!', statusCode: 500};
-      }
-    },
-    put: async () => {},
-    delete: async () => {},
+    get: userHandlers._get,
+    post: userHandlers._post,
+    put: userHandlers._put,
+    delete: userHandlers._delete,
   }
 };
 
@@ -54,14 +49,15 @@ const notFound = (res) => {
 }
 
 const listener = async (req, res) => {
-  const { method, url, headers } = req;
+  const { method } = req;
+  const { queryParams, endpoint } = parseQueryParams(req);
   let body = null;
   if (method === "POST") body = await receiveArgs(req);
-  const route = routing[url];
+  const route = routing[endpoint];
   if (!route) return notFound(res);
   const handler = route[method.toLowerCase()];
   if (!handler) return notFound(res);
-  const { result, statusCode } = await handler(body, 200);
+  const { result, statusCode } = await handler({body, queryParams});
   res.writeHead(statusCode, {'Content-Type' : 'application/json'});
   res.end(JSON.stringify({ result, body }));
 };
