@@ -18,11 +18,12 @@ const parseQueryParams = (req) => {
   const protocol = port.includes('1') ? 'https' : 'http';
   const urlObj = new URL(`${protocol}://${host}${url}`);
   const queryParams = {};
-  if (urlObj.search === '') return queryParams;
+  const endpoint = urlObj.pathname;
+  if (urlObj.search === '') return { queryParams, endpoint };
   for (const [key, value] of urlObj.searchParams.entries()) {
     queryParams[key] = value;
   }
-  return { queryParams, endpoint: urlObj.pathname };
+  return { queryParams, endpoint };
 };
 
 const routing = {
@@ -52,11 +53,12 @@ const listener = async (req, res) => {
   const { method } = req;
   const { queryParams, endpoint } = parseQueryParams(req);
   let body = null;
-  if (method === "POST") body = await receiveArgs(req);
   const route = routing[endpoint];
   if (!route) return notFound(res);
   const handler = route[method.toLowerCase()];
   if (!handler) return notFound(res);
+  const bodyRequired = handler.toString().startsWith('async ({ body');
+  if (bodyRequired) body = await receiveArgs(req);
   const { result, statusCode } = await handler({body, queryParams});
   res.writeHead(statusCode, {'Content-Type' : 'application/json'});
   res.end(JSON.stringify({ result, body }));
