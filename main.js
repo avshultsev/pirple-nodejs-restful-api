@@ -57,6 +57,7 @@ const notFound = (res) => {
 
 const listener = async (req, res) => {
   const { method } = req;
+  const { token } = req.headers;
   const { queryParams, endpoint } = parseQueryParams(req);
   let body = null;
   const route = routing[endpoint];
@@ -65,7 +66,7 @@ const listener = async (req, res) => {
   if (!handler) return notFound(res);
   const bodyRequired = handler.toString().startsWith('async ({ body');
   if (bodyRequired) body = await receiveArgs(req);
-  const { result, statusCode } = await handler({body, queryParams});
+  const { result, statusCode } = await handler({ body, queryParams, token});
   res.writeHead(statusCode, {'Content-Type' : 'application/json'});
   res.end(JSON.stringify({ result, body }));
 };
