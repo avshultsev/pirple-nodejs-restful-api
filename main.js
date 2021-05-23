@@ -3,6 +3,7 @@ const https = require('https');
 const fs    = require('fs');
 const { port: PORT, httpsPort, envName } = require('./config.js');
 const userHandlers = require('./lib/userHandlers.js');
+const tokenHandlers = require('./lib/tokenHandlers.js');
 
 const receiveArgs = async (req) => {
   const chunks = [];
@@ -11,9 +12,8 @@ const receiveArgs = async (req) => {
   return JSON.parse(data);
 };
 
-const parseQueryParams = (req) => {
-  const { url, headers } = req;
-  const host = headers.host;
+const parseQueryParams = ({ url, headers }) => {
+  const { host } = headers;
   const port = host.split(':')[1];
   const protocol = port.includes('1') ? 'https' : 'http';
   const urlObj = new URL(`${protocol}://${host}${url}`);
@@ -41,6 +41,12 @@ const routing = {
     post: userHandlers._post,
     put: userHandlers._put,
     delete: userHandlers._delete,
+  },
+  '/tokens': {
+    get: tokenHandlers._get,
+    post: tokenHandlers._post,
+    put: tokenHandlers._put,
+    delete: tokenHandlers._delete,
   }
 };
 
