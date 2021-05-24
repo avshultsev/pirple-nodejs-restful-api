@@ -2,8 +2,9 @@ const http  = require('http');
 const https = require('https');
 const fs    = require('fs');
 const { port: PORT, httpsPort, envName } = require('./config.js');
-const userHandlers = require('./lib/userHandlers.js');
-const tokenHandlers = require('./lib/tokenHandlers.js');
+const userHandlers   = require('./lib/userHandlers.js');
+const tokenHandlers  = require('./lib/tokenHandlers.js');
+const checksHandlers = require('./lib/checkHandlers.js');
 
 const receiveArgs = async (req) => {
   const chunks = [];
@@ -47,7 +48,13 @@ const routing = {
     post: tokenHandlers._post,
     put: tokenHandlers._put,
     delete: tokenHandlers._delete,
-  }
+  },
+  '/checks': {
+    get: checksHandlers._get,
+    post: checksHandlers._post,
+    put: checksHandlers._put,
+    delete: checksHandlers._delete,
+  },
 };
 
 const notFound = (res) => {
