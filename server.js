@@ -2,10 +2,8 @@ const http  = require('http');
 const https = require('https');
 const fs    = require('fs');
 const path  = require('path');
-const { port: PORT, httpsPort, envName } = require('./config.js');
-const userHandlers   = require('./lib/userHandlers.js');
-const tokenHandlers  = require('./lib/tokenHandlers.js');
-const checksHandlers = require('./lib/checkHandlers.js');
+const { port: PORT, httpsPort, envName, globals } = require('./config.js');
+const routing = require('./routing.js');
 
 const MIME_TYPES = {
   html: 'text/html; charset=UTF-8',
@@ -16,11 +14,71 @@ const MIME_TYPES = {
   svg: 'image/svg+xml',
 };
 
+const PAGE_SPECIFIC_PLACEHOLDERS = {
+  'index': {
+    'head.title': 'Main Page',
+  },
+  'page1': {
+    'head.title': 'Page 1',
+  },
+};
+
+const cache = new Map();
 const staticPath = path.join(__dirname, 'public');
-const serveFile = (name) => {
-  const filePath = path.join(staticPath, name);
-  const stream = fs.createReadStream(filePath);
-  return stream;
+const retreiveFile = async (fileName) => {
+  const filePath = path.join(staticPath, fileName);
+  const stream = fs.createReadStream(filePath, { encoding: 'utf-8' });
+  stream.on('error', (err) => {
+    console.log(err);
+  });
+  let data = '';
+  for await (const chunk of stream) data += chunk;
+  return data;
+};
+
+const getHeaderAndFooter = () => {
+  const arr = ['__header.html', '__footer.html'];
+  const promises = arr.map(retreiveFile);
+  return Promise.all(promises).then(([__header, __footer]) => {
+    cache.set('__header', __header);
+    cache.set('__footer', __footer);
+    return [__header, __footer];
+  });
+};
+
+const removePlaceholders = (rawHtml = '', fileName = '') => {
+  const { name } = path.parse(fileName);
+  const pageData = PAGE_SPECIFIC_PLACEHOLDERS[name] || {'head.title': 'Not Found'};
+  const str = Object.keys(pageData).reduce((acc, key) => {
+    return acc.replace(`{${key}}`, pageData[key])
+  }, rawHtml);
+  return Object.keys(globals).reduce((acc, key) => {
+    const placeholder = '{globals.'+ key + '}';
+    const value = globals[key];
+    return acc.replace(placeholder, value);
+  }, str);
+};
+
+const serveFile = async (name, ext) => {
+  const isHTML = ext === 'html';
+  let content = cache.get(name);
+  if (!content) {
+    try {
+      content = await retreiveFile(name);
+      if (isHTML) cache.set(name, content); // cache only markup
+    } catch (err) {
+      content = isHTML ? '<h1>Page you\'re looking for does not exist!</h1>' : '';
+    }
+  }
+  if (!isHTML) return content;
+  let header = cache.get('__header');
+  let footer = cache.get('__footer');
+  if (!header || !footer) {
+    [header, footer] = await getHeaderAndFooter();
+    cache.set('__header', header);
+    cache.set('__footer', footer);
+  }
+  return removePlaceholders(header + content + footer, name);
 };
 
 const receiveArgs = async (req) => {
@@ -44,18 +102,6 @@ const parseQueryParams = ({ url, headers }) => {
   return { queryParams, endpoint };
 };
 
-const routing = {
-  '/ping': {
-    get: async () => 'I\'m alive!',
-  },
-  '/hello': {
-    get: async () => 'Hello there! Nice to meet you!',
-  },
-  '/api/users' : userHandlers,
-  '/api/tokens': tokenHandlers,
-  '/api/checks': checksHandlers,
-};
-
 const notFound = (res) => {
   res.writeHead(404, 'Not Found', {'Content-Type' : 'text/plain'});
   res.end('Not Found');
@@ -77,16 +123,20 @@ const listener = async (req, res) => {
     res.writeHead(statusCode, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ result, body }));
   }
-  const name = url === '/' ? '/index.html' : url; // try 'index.html' (without slash)
-  const fileExt = path.extname(name).substring(1) || 'html';
+  let fileName = url === '/' ? '/index.html' : url;
+  let fileExt = path.extname(fileName).substring(1);
+  if (!fileExt) {
+    fileExt = 'html';
+    fileName += ('.' + fileExt);
+  };
   const type = MIME_TYPES[fileExt] || MIME_TYPES.html;
-  const stream = serveFile(name);
-  stream.on('error', () => {
+  const content = await serveFile(fileName, fileExt);
+  if (content === '') {
     res.writeHead(404, 'Not Found!');
     res.end();
-  });
+  }
   res.writeHead(200, { 'Content-Type': type });
-  stream.pipe(res);
+  res.end(content);
 };
 
 const httpsOptions = {
