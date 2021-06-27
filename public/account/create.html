@@ -1,0 +1,28 @@
+<div class="form-wrapper">
+  <form id="accountCreate" action="/api/users" method="post">
+    <div class="formError"></div>
+    <div class="input-wrapper">
+      <label for="firstName" class="input-label">First Name</label>
+      <input type="text" name="firstName" id="firstName" required placeholder="John">
+    </div>
+    <div class="input-wrapper">
+      <label for="lastName" class="input-label">Last Name</label>
+      <input type="text" name="lastName" id="lastName" required placeholder="Smith">
+    </div>
+    <div class="input-wrapper">
+      <label for="phone" class="input-label">Phone</label>
+      <input type="tel" name="phone" id="phone" required placeholder="099 987 65 43">
+    </div>
+    <div class="input-wrapper">
+      <label for="password" class="input-label">Password</label>
+      <input type="password" name="password" id="password" required>
+    </div>
+    <div class="input-wrapper">
+      <label for="tosAgreement" class="input-label">Do you agree with the terms and conditions?</label>
+      <input type="checkbox" name="tosAgreement" id="tosAgreement" required value="true">
+    </div>
+    <div class="input-wrapper">
+      <button type="submit" class="cta blue">Get started</button>
+    </div>
+  </form>
+</div>

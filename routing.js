@@ -3,10 +3,10 @@ const tokenHandlers  = require('./lib/tokenHandlers.js');
 const checksHandlers = require('./lib/checkHandlers.js');
 
 const routing = {
-  '/ping': {
-    get: async () => 'I\'m alive!',
+  '/api/ping': {
+    get: async () => ({ result: 'I\'m alive!', statusCode: 200 }),
   },
-  '/hello': {
+  '/api/hello': {
     get: async () => 'Hello there! Nice to meet you!',
   },
   '/api/users' : userHandlers,

@@ -15,11 +15,14 @@ const MIME_TYPES = {
 };
 
 const PAGE_SPECIFIC_PLACEHOLDERS = {
-  'index': {
+  '/index.html': {
     'head.title': 'Main Page',
   },
-  'page1': {
-    'head.title': 'Page 1',
+  '/session/create.html': {
+    'head.title': 'Create session',
+  },
+  '/account/create.html': {
+    'head.title': 'Create an account',
   },
 };
 
@@ -27,7 +30,7 @@ const cache = new Map();
 const staticPath = path.join(__dirname, 'public');
 const retreiveFile = async (fileName) => {
   const filePath = path.join(staticPath, fileName);
-  const stream = fs.createReadStream(filePath, { encoding: 'utf-8' });
+  const stream = fs.createReadStream(filePath);
   stream.on('error', (err) => {
     console.log(err);
   });
@@ -47,8 +50,7 @@ const getHeaderAndFooter = () => {
 };
 
 const removePlaceholders = (rawHtml = '', fileName = '') => {
-  const { name } = path.parse(fileName);
-  const pageData = PAGE_SPECIFIC_PLACEHOLDERS[name] || {'head.title': 'Not Found'};
+  const pageData = PAGE_SPECIFIC_PLACEHOLDERS[fileName] || {'head.title': 'Not Found'};
   const str = Object.keys(pageData).reduce((acc, key) => {
     return acc.replace(`{${key}}`, pageData[key])
   }, rawHtml);
@@ -121,11 +123,11 @@ const listener = async (req, res) => {
     if (bodyRequired) body = await receiveArgs(req);
     const { result, statusCode } = await handler({ body, queryParams, token });
     res.writeHead(statusCode, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ result, body }));
+    return res.end(JSON.stringify({ result, statusCode }));
   }
   let fileName = url === '/' ? '/index.html' : url;
   let fileExt = path.extname(fileName).substring(1);
-  if (!fileExt) {
+  if (!fileExt) { // so that 'http://localhost:3000/page1' and 'http://localhost:3000/page1.html' both return same result
     fileExt = 'html';
     fileName += ('.' + fileExt);
   };
