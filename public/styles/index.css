@@ -98,25 +98,33 @@ a:visited {
   color: #000;
 }
 
-.cta.green,
-.cta.blue {
+.cta {
   display: block;
   cursor: pointer;
   text-decoration: none;
   text-align: center;
   width: 150px;
   height: 3em;
+  transition: all .3s;
+  border-radius: 10px;
+}
+
+.cta.green {
   background-color: rgb(72, 255, 0);
   border: 2px solid rgb(29, 104, 0);
-  border-radius: 10px;
   color: #000;
-  transition: all .3s;
 }
 
 .cta.blue {
   background-color: rgb(0, 102, 255);
   border: 2px solid rgb(0, 33, 104);
   color: #fff;
+}
+
+.cta.red {
+  background-color: rgb(255, 0, 0);
+  border: 2px solid #000;
+  color: #000;
 }
 
 .cta.green:hover {
@@ -127,12 +135,20 @@ a:visited {
   background-color: rgba(0, 102, 255, 0.7);
 }
 
+.cta.red:hover {
+  background-color: rgba(255, 0, 0, 0.5);
+}
+
 .cta.green:visited {
   color: #000;
 }
 
 .cta.blue:visited {
   color: #fff;
+}
+
+.cta.red:visited {
+  color: #000;
 }
 
 div.footer {
